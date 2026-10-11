@@ -46,6 +46,16 @@ public class Pedido {
     private String registradoPor;
     private LocalDateTime dataHoraEntrada;
 
+    // ===== saida (saiu para entrega ou retirado) =====
+    private String saidaRegistradaPor;
+    private LocalDateTime dataHoraSaida;
+
+    // ===== finalizacao =====
+    private String finalizadoPor;
+    private LocalDateTime dataHoraFinalizacao;
+
+    private List<HistoricoStatus> historico = new ArrayList<>();
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -87,4 +97,24 @@ public class Pedido {
 
     public LocalDateTime getDataHoraEntrada() { return dataHoraEntrada; }
     public void setDataHoraEntrada(LocalDateTime dataHoraEntrada) { this.dataHoraEntrada = dataHoraEntrada; }
+
+    public String getSaidaRegistradaPor() { return saidaRegistradaPor; }
+    public void setSaidaRegistradaPor(String saidaRegistradaPor) { this.saidaRegistradaPor = saidaRegistradaPor; }
+
+    public LocalDateTime getDataHoraSaida() { return dataHoraSaida; }
+    public void setDataHoraSaida(LocalDateTime dataHoraSaida) { this.dataHoraSaida = dataHoraSaida; }
+
+    public String getFinalizadoPor() { return finalizadoPor; }
+    public void setFinalizadoPor(String finalizadoPor) { this.finalizadoPor = finalizadoPor; }
+
+    public LocalDateTime getDataHoraFinalizacao() { return dataHoraFinalizacao; }
+    public void setDataHoraFinalizacao(LocalDateTime dataHoraFinalizacao) { this.dataHoraFinalizacao = dataHoraFinalizacao; }
+
+    public List<HistoricoStatus> getHistorico() { return historico; }
+    public void setHistorico(List<HistoricoStatus> historico) { this.historico = historico; }
+
+    /** Proximo status possivel no fluxo (usado nas telas para o botao "avancar"). */
+    public StatusPedido getProximoStatus() {
+        return status != null ? status.proximo(tipoEntrega) : null;
+    }
 }

@@ -37,8 +37,15 @@ public class PedidoController {
         return pedidoService.buscarPorId(id);
     }
 
+    // ex: PUT /api/pedidos/{id}/status?status=EM_PREPARACAO
     @PutMapping("/{id}/status")
     public Pedido atualizarStatus(@PathVariable String id, @RequestParam StatusPedido status) {
         return pedidoService.atualizarStatus(id, status);
+    }
+
+    // move para o proximo status do fluxo
+    @PutMapping("/{id}/avancar")
+    public Pedido avancarStatus(@PathVariable String id) {
+        return pedidoService.avancarStatus(id);
     }
 }

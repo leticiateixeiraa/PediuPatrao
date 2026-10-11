@@ -2,6 +2,7 @@ package com.umc.pediupatrao.controller;
 
 import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
 import com.umc.pediupatrao.exception.RegraNegocioException;
+import com.umc.pediupatrao.exception.TransicaoInvalidaException;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,6 +26,11 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    @ExceptionHandler(TransicaoInvalidaException.class)
+    public ResponseEntity<Map<String, Object>> transicaoInvalida(TransicaoInvalidaException e) {
+        return resposta(HttpStatus.CONFLICT, e.getMessage());
+    }
 
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<Map<String, Object>> regraNegocio(RegraNegocioException e) {

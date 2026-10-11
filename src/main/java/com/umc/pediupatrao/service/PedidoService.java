@@ -3,6 +3,7 @@ package com.umc.pediupatrao.service;
 import com.umc.pediupatrao.dto.ItemPedidoRequest;
 import com.umc.pediupatrao.dto.PedidoRequest;
 import com.umc.pediupatrao.entity.Cliente;
+import com.umc.pediupatrao.entity.HistoricoStatus;
 import com.umc.pediupatrao.entity.ItemPedido;
 import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.Produto;
@@ -10,6 +11,7 @@ import com.umc.pediupatrao.entity.StatusPedido;
 import com.umc.pediupatrao.entity.TipoEntrega;
 import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
 import com.umc.pediupatrao.exception.RegraNegocioException;
+import com.umc.pediupatrao.exception.TransicaoInvalidaException;
 import com.umc.pediupatrao.repository.ClienteRepository;
 import com.umc.pediupatrao.repository.PedidoRepository;
 import com.umc.pediupatrao.repository.ProdutoRepository;
@@ -77,17 +79,69 @@ public class PedidoService {
         pedido.setPercentualDesconto(BigDecimal.ZERO);
         recalcularValores(pedido);
 
+        LocalDateTime agora = agora();
+        String usuario = usuarioLogado.username();
         pedido.setStatus(StatusPedido.RECEBIDO);
-        pedido.setRegistradoPor(usuarioLogado.username());
-        pedido.setDataHoraEntrada(agora());
+        pedido.setRegistradoPor(usuario);
+        pedido.setDataHoraEntrada(agora);
+        pedido.getHistorico().add(new HistoricoStatus(StatusPedido.RECEBIDO, agora, usuario));
 
         return pedidoRepository.save(pedido);
     }
 
-    public Pedido atualizarStatus(String id, StatusPedido status) {
+    /**
+     * Avanca o pedido no fluxo. So aceita o proximo status valido;
+     * cancelamento tem operacao propria (exclusiva do gerente).
+     */
+    public Pedido atualizarStatus(String id, StatusPedido novoStatus) {
+        if (novoStatus == null) {
+            throw new RegraNegocioException("Informe o novo status.");
+        }
         Pedido pedido = buscarPorId(id);
-        pedido.setStatus(status);
+        StatusPedido atual = pedido.getStatus();
+
+        if (novoStatus == StatusPedido.CANCELADO) {
+            throw new RegraNegocioException("Para cancelar use a opção de cancelamento (somente gerente, com justificativa).");
+        }
+        if (atual == StatusPedido.CANCELADO) {
+            throw new TransicaoInvalidaException("Pedido cancelado não pode mais ter o status alterado.");
+        }
+        if (atual == null || atual.ehFinal()) {
+            throw new TransicaoInvalidaException("Pedido já finalizado não pode mais ter o status alterado.");
+        }
+        if (!atual.podeIrPara(novoStatus, pedido.getTipoEntrega())) {
+            StatusPedido esperado = atual.proximo(pedido.getTipoEntrega());
+            throw new TransicaoInvalidaException("Transição inválida: " + atual.getDescricao() + " → "
+                    + novoStatus.getDescricao() + ". Próximo status permitido: "
+                    + (esperado != null ? esperado.getDescricao() : "nenhum") + ".");
+        }
+
+        LocalDateTime agora = agora();
+        String usuario = usuarioLogado.username();
+
+        if (novoStatus.ehSaida()) {
+            // saida obrigatoriamente registra data/hora e responsavel
+            pedido.setDataHoraSaida(agora);
+            pedido.setSaidaRegistradaPor(usuario);
+        }
+        if (novoStatus == StatusPedido.FINALIZADO) {
+            pedido.setDataHoraFinalizacao(agora);
+            pedido.setFinalizadoPor(usuario);
+        }
+        pedido.setStatus(novoStatus);
+        pedido.getHistorico().add(new HistoricoStatus(novoStatus, agora, usuario));
+
         return pedidoRepository.save(pedido);
+    }
+
+    /** Atalho para mover para o proximo status do fluxo. */
+    public Pedido avancarStatus(String id) {
+        Pedido pedido = buscarPorId(id);
+        StatusPedido proximo = pedido.getProximoStatus();
+        if (proximo == null) {
+            throw new TransicaoInvalidaException("Este pedido não tem próximo status.");
+        }
+        return atualizarStatus(id, proximo);
     }
 
     // ================== calculos e validacoes ==================
