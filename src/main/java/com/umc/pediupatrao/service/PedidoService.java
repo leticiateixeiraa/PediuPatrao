@@ -1,5 +1,8 @@
 package com.umc.pediupatrao.service;
 
+import com.umc.pediupatrao.auditoria.Alteracoes;
+import com.umc.pediupatrao.auditoria.AuditoriaService;
+import com.umc.pediupatrao.auditoria.TipoOperacao;
 import com.umc.pediupatrao.dto.ItemPedidoRequest;
 import com.umc.pediupatrao.dto.PedidoRequest;
 import com.umc.pediupatrao.entity.Cliente;
@@ -35,22 +38,26 @@ public class PedidoService {
     static final BigDecimal DESCONTO_MAXIMO = new BigDecimal("20");
     static final int TAMANHO_MINIMO_JUSTIFICATIVA = 10;
     static final int TAMANHO_MAXIMO_JUSTIFICATIVA = 500;
+    static final String ENTIDADE = "PEDIDO";
 
     private final PedidoRepository pedidoRepository;
     private final ProdutoRepository produtoRepository;
     private final ClienteRepository clienteRepository;
     private final UsuarioLogado usuarioLogado;
+    private final AuditoriaService auditoriaService;
     private final Clock clock;
 
     public PedidoService(PedidoRepository pedidoRepository,
                          ProdutoRepository produtoRepository,
                          ClienteRepository clienteRepository,
                          UsuarioLogado usuarioLogado,
+                         AuditoriaService auditoriaService,
                          Clock clock) {
         this.pedidoRepository = pedidoRepository;
         this.produtoRepository = produtoRepository;
         this.clienteRepository = clienteRepository;
         this.usuarioLogado = usuarioLogado;
+        this.auditoriaService = auditoriaService;
         this.clock = clock;
     }
 
@@ -90,7 +97,18 @@ public class PedidoService {
         pedido.setDataHoraEntrada(agora);
         pedido.getHistorico().add(new HistoricoStatus(StatusPedido.RECEBIDO, agora, usuario));
 
-        return pedidoRepository.save(pedido);
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        auditoriaService.registrar(TipoOperacao.INCLUSAO_PEDIDO, ENTIDADE, salvo.getId(),
+                new Alteracoes()
+                        .novo("clienteId", salvo.getClienteId())
+                        .novo("tipoEntrega", salvo.getTipoEntrega())
+                        .novo("itens", salvo.getItens())
+                        .novo("valorTotal", salvo.getValorTotal())
+                        .novo("status", salvo.getStatus())
+                        .novo("dataHoraEntrada", salvo.getDataHoraEntrada()),
+                null);
+        return salvo;
     }
 
     /**
@@ -110,13 +128,31 @@ public class PedidoService {
             throw new RegraNegocioException("Não é permitido trocar o cliente do pedido.");
         }
 
+        // guarda os valores anteriores para a auditoria
+        String itensAntes = pedido.getItens().toString();
+        TipoEntrega tipoAntes = pedido.getTipoEntrega();
+        String observacaoAntes = pedido.getObservacao();
+        BigDecimal subtotalAntes = pedido.getSubtotal();
+        BigDecimal totalAntes = pedido.getValorTotal();
+
         Cliente cliente = buscarCliente(pedido.getClienteId());
         pedido.setTipoEntrega(validarTipoEntrega(request.tipoEntrega(), cliente));
         pedido.setObservacao(validarObservacao(request.observacao()));
         pedido.setItens(montarItens(request.itens()));
         recalcularValores(pedido);
 
-        return pedidoRepository.save(pedido);
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        Alteracoes alteracoes = new Alteracoes()
+                .campo("itens", itensAntes, salvo.getItens().toString())
+                .campo("tipoEntrega", tipoAntes, salvo.getTipoEntrega())
+                .campo("observacao", observacaoAntes, salvo.getObservacao())
+                .campo("subtotal", subtotalAntes, salvo.getSubtotal())
+                .campo("valorTotal", totalAntes, salvo.getValorTotal());
+        if (!alteracoes.vazia()) {
+            auditoriaService.registrar(TipoOperacao.ALTERACAO_PEDIDO, ENTIDADE, salvo.getId(), alteracoes, null);
+        }
+        return salvo;
     }
 
     /**
@@ -161,7 +197,18 @@ public class PedidoService {
         pedido.setStatus(novoStatus);
         pedido.getHistorico().add(new HistoricoStatus(novoStatus, agora, usuario));
 
-        return pedidoRepository.save(pedido);
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        Alteracoes alteracoes = new Alteracoes().campo("status", atual, novoStatus);
+        if (novoStatus.ehSaida()) {
+            alteracoes.novo("dataHoraSaida", salvo.getDataHoraSaida())
+                    .novo("saidaRegistradaPor", salvo.getSaidaRegistradaPor());
+        }
+        if (novoStatus == StatusPedido.FINALIZADO) {
+            alteracoes.novo("dataHoraFinalizacao", salvo.getDataHoraFinalizacao());
+        }
+        auditoriaService.registrar(TipoOperacao.MUDANCA_STATUS_PEDIDO, ENTIDADE, salvo.getId(), alteracoes, null);
+        return salvo;
     }
 
     /** Atalho para mover para o proximo status do fluxo. */
@@ -201,7 +248,15 @@ public class PedidoService {
         pedido.setJustificativaCancelamento(motivo);
         pedido.getHistorico().add(new HistoricoStatus(StatusPedido.CANCELADO, agora, usuario));
 
-        return pedidoRepository.save(pedido);
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        auditoriaService.registrar(TipoOperacao.CANCELAMENTO_PEDIDO, ENTIDADE, salvo.getId(),
+                new Alteracoes()
+                        .campo("status", atual, StatusPedido.CANCELADO)
+                        .novo("dataHoraCancelamento", agora)
+                        .novo("valorTotal", salvo.getValorTotal()),
+                motivo);
+        return salvo;
     }
 
     /**
@@ -230,13 +285,25 @@ public class PedidoService {
             throw new TransicaoInvalidaException("Desconto só pode ser aplicado antes da saída para entrega/retirada.");
         }
 
+        BigDecimal percentualAntes = pedido.getPercentualDesconto();
+        BigDecimal descontoAntes = pedido.getValorDesconto();
+        BigDecimal totalAntes = pedido.getValorTotal();
+
         pedido.setPercentualDesconto(percentual.setScale(2, RoundingMode.HALF_UP));
         recalcularValores(pedido);
         pedido.setDescontoAplicadoPor(usuarioLogado.username());
         pedido.setDataHoraDesconto(agora());
         pedido.setJustificativaDesconto(motivo);
 
-        return pedidoRepository.save(pedido);
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        auditoriaService.registrar(TipoOperacao.DESCONTO_PEDIDO, ENTIDADE, salvo.getId(),
+                new Alteracoes()
+                        .campo("percentualDesconto", percentualAntes, salvo.getPercentualDesconto())
+                        .campo("valorDesconto", descontoAntes, salvo.getValorDesconto())
+                        .campo("valorTotal", totalAntes, salvo.getValorTotal()),
+                motivo);
+        return salvo;
     }
 
     // ================== calculos e validacoes ==================
