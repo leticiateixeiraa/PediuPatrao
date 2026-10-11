@@ -39,6 +39,12 @@ public class PedidoController {
         return pedidoService.buscarPorId(id);
     }
 
+    // altera itens/tipo/observacao enquanto o pedido esta RECEBIDO
+    @PutMapping("/{id}")
+    public Pedido alterarPedido(@PathVariable String id, @RequestBody PedidoRequest request) {
+        return pedidoService.alterarPedido(id, request);
+    }
+
     // ex: PUT /api/pedidos/{id}/status?status=EM_PREPARACAO
     @PutMapping("/{id}/status")
     public Pedido atualizarStatus(@PathVariable String id, @RequestParam StatusPedido status) {

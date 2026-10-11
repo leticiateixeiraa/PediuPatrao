@@ -94,6 +94,32 @@ public class PedidoService {
     }
 
     /**
+     * Altera itens, tipo e observacao do pedido. So enquanto ainda RECEBIDO
+     * (depois que foi pra cozinha nao muda mais). O desconto ja dado e mantido
+     * e o total e recalculado.
+     */
+    public Pedido alterarPedido(String id, PedidoRequest request) {
+        if (request == null) {
+            throw new RegraNegocioException("Dados do pedido não informados.");
+        }
+        Pedido pedido = buscarPorId(id);
+        if (pedido.getStatus() != StatusPedido.RECEBIDO) {
+            throw new TransicaoInvalidaException("Só é possível alterar o pedido enquanto ele está com status Recebido.");
+        }
+        if (request.clienteId() != null && !request.clienteId().equals(pedido.getClienteId())) {
+            throw new RegraNegocioException("Não é permitido trocar o cliente do pedido.");
+        }
+
+        Cliente cliente = buscarCliente(pedido.getClienteId());
+        pedido.setTipoEntrega(validarTipoEntrega(request.tipoEntrega(), cliente));
+        pedido.setObservacao(validarObservacao(request.observacao()));
+        pedido.setItens(montarItens(request.itens()));
+        recalcularValores(pedido);
+
+        return pedidoRepository.save(pedido);
+    }
+
+    /**
      * Avanca o pedido no fluxo. So aceita o proximo status valido;
      * cancelamento tem operacao propria (exclusiva do gerente).
      */
