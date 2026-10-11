@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,6 +32,9 @@ public class PedidoService {
     static final int QUANTIDADE_MAXIMA_POR_ITEM = 50;
     static final int MAXIMO_ITENS = 30;
     static final int TAMANHO_MAXIMO_OBSERVACAO = 300;
+    static final BigDecimal DESCONTO_MAXIMO = new BigDecimal("20");
+    static final int TAMANHO_MINIMO_JUSTIFICATIVA = 10;
+    static final int TAMANHO_MAXIMO_JUSTIFICATIVA = 500;
 
     private final PedidoRepository pedidoRepository;
     private final ProdutoRepository produtoRepository;
@@ -144,6 +148,71 @@ public class PedidoService {
         return atualizarStatus(id, proximo);
     }
 
+    /**
+     * Cancela o pedido. Exclusivo do GERENTE (inclusive em relacao ao ADMIN),
+     * exige justificativa e so e permitido antes da saida para entrega/retirada.
+     * Os dados do pedido sao mantidos (nada e apagado), so o status muda.
+     */
+    @PreAuthorize("hasRole('GERENTE')")
+    public Pedido cancelar(String id, String justificativa) {
+        String motivo = validarJustificativa(justificativa, true);
+        Pedido pedido = buscarPorId(id);
+        StatusPedido atual = pedido.getStatus();
+
+        if (atual == StatusPedido.CANCELADO) {
+            throw new TransicaoInvalidaException("Este pedido já está cancelado.");
+        }
+        if (atual == null || !atual.permiteCancelamentoOuDesconto()) {
+            throw new TransicaoInvalidaException("Pedido que já saiu para entrega/retirada não pode ser cancelado.");
+        }
+
+        LocalDateTime agora = agora();
+        String usuario = usuarioLogado.username();
+        pedido.setStatusAntesDoCancelamento(atual);
+        pedido.setStatus(StatusPedido.CANCELADO);
+        pedido.setCanceladoPor(usuario);
+        pedido.setDataHoraCancelamento(agora);
+        pedido.setJustificativaCancelamento(motivo);
+        pedido.getHistorico().add(new HistoricoStatus(StatusPedido.CANCELADO, agora, usuario));
+
+        return pedidoRepository.save(pedido);
+    }
+
+    /**
+     * Aplica desconto percentual (maximo 20%) sobre o subtotal. Exclusivo do GERENTE.
+     * Um novo desconto substitui o anterior (nao acumula), entao o total nunca passa de 20%.
+     */
+    @PreAuthorize("hasRole('GERENTE')")
+    public Pedido aplicarDesconto(String id, BigDecimal percentual, String justificativa) {
+        if (percentual == null) {
+            throw new RegraNegocioException("Informe o percentual de desconto.");
+        }
+        if (percentual.compareTo(BigDecimal.ZERO) <= 0 || percentual.compareTo(DESCONTO_MAXIMO) > 0) {
+            throw new RegraNegocioException("O desconto deve ser maior que 0% e no máximo " + DESCONTO_MAXIMO + "%.");
+        }
+        if (percentual.stripTrailingZeros().scale() > 2) {
+            throw new RegraNegocioException("Use no máximo duas casas decimais no percentual.");
+        }
+        String motivo = validarJustificativa(justificativa, false);
+
+        Pedido pedido = buscarPorId(id);
+        StatusPedido atual = pedido.getStatus();
+        if (atual == StatusPedido.CANCELADO) {
+            throw new TransicaoInvalidaException("Pedido cancelado não pode receber desconto.");
+        }
+        if (atual == null || !atual.permiteCancelamentoOuDesconto()) {
+            throw new TransicaoInvalidaException("Desconto só pode ser aplicado antes da saída para entrega/retirada.");
+        }
+
+        pedido.setPercentualDesconto(percentual.setScale(2, RoundingMode.HALF_UP));
+        recalcularValores(pedido);
+        pedido.setDescontoAplicadoPor(usuarioLogado.username());
+        pedido.setDataHoraDesconto(agora());
+        pedido.setJustificativaDesconto(motivo);
+
+        return pedidoRepository.save(pedido);
+    }
+
     // ================== calculos e validacoes ==================
 
     /**
@@ -229,6 +298,23 @@ public class PedidoService {
         String texto = observacao.trim();
         if (texto.length() > TAMANHO_MAXIMO_OBSERVACAO) {
             throw new RegraNegocioException("Observação pode ter no máximo " + TAMANHO_MAXIMO_OBSERVACAO + " caracteres.");
+        }
+        return texto;
+    }
+
+    private String validarJustificativa(String justificativa, boolean obrigatoria) {
+        String texto = justificativa == null ? "" : justificativa.trim();
+        if (texto.isEmpty()) {
+            if (obrigatoria) {
+                throw new RegraNegocioException("A justificativa é obrigatória.");
+            }
+            return null;
+        }
+        if (texto.length() < TAMANHO_MINIMO_JUSTIFICATIVA) {
+            throw new RegraNegocioException("A justificativa deve ter pelo menos " + TAMANHO_MINIMO_JUSTIFICATIVA + " caracteres.");
+        }
+        if (texto.length() > TAMANHO_MAXIMO_JUSTIFICATIVA) {
+            throw new RegraNegocioException("A justificativa pode ter no máximo " + TAMANHO_MAXIMO_JUSTIFICATIVA + " caracteres.");
         }
         return texto;
     }

@@ -54,6 +54,17 @@ public class Pedido {
     private String finalizadoPor;
     private LocalDateTime dataHoraFinalizacao;
 
+    // ===== cancelamento (somente gerente) =====
+    private String canceladoPor;
+    private LocalDateTime dataHoraCancelamento;
+    private String justificativaCancelamento;
+    private StatusPedido statusAntesDoCancelamento;
+
+    // ===== desconto (somente gerente) =====
+    private String descontoAplicadoPor;
+    private LocalDateTime dataHoraDesconto;
+    private String justificativaDesconto;
+
     private List<HistoricoStatus> historico = new ArrayList<>();
 
     public String getId() { return id; }
@@ -112,6 +123,27 @@ public class Pedido {
 
     public List<HistoricoStatus> getHistorico() { return historico; }
     public void setHistorico(List<HistoricoStatus> historico) { this.historico = historico; }
+
+    public String getCanceladoPor() { return canceladoPor; }
+    public void setCanceladoPor(String canceladoPor) { this.canceladoPor = canceladoPor; }
+
+    public LocalDateTime getDataHoraCancelamento() { return dataHoraCancelamento; }
+    public void setDataHoraCancelamento(LocalDateTime dataHoraCancelamento) { this.dataHoraCancelamento = dataHoraCancelamento; }
+
+    public String getJustificativaCancelamento() { return justificativaCancelamento; }
+    public void setJustificativaCancelamento(String justificativaCancelamento) { this.justificativaCancelamento = justificativaCancelamento; }
+
+    public StatusPedido getStatusAntesDoCancelamento() { return statusAntesDoCancelamento; }
+    public void setStatusAntesDoCancelamento(StatusPedido statusAntesDoCancelamento) { this.statusAntesDoCancelamento = statusAntesDoCancelamento; }
+
+    public String getDescontoAplicadoPor() { return descontoAplicadoPor; }
+    public void setDescontoAplicadoPor(String descontoAplicadoPor) { this.descontoAplicadoPor = descontoAplicadoPor; }
+
+    public LocalDateTime getDataHoraDesconto() { return dataHoraDesconto; }
+    public void setDataHoraDesconto(LocalDateTime dataHoraDesconto) { this.dataHoraDesconto = dataHoraDesconto; }
+
+    public String getJustificativaDesconto() { return justificativaDesconto; }
+    public void setJustificativaDesconto(String justificativaDesconto) { this.justificativaDesconto = justificativaDesconto; }
 
     /** Proximo status possivel no fluxo (usado nas telas para o botao "avancar"). */
     public StatusPedido getProximoStatus() {

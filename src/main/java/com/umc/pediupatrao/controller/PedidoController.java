@@ -1,5 +1,7 @@
 package com.umc.pediupatrao.controller;
 
+import com.umc.pediupatrao.dto.CancelamentoRequest;
+import com.umc.pediupatrao.dto.DescontoRequest;
 import com.umc.pediupatrao.dto.PedidoRequest;
 import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.StatusPedido;
@@ -41,6 +43,18 @@ public class PedidoController {
     @PutMapping("/{id}/status")
     public Pedido atualizarStatus(@PathVariable String id, @RequestParam StatusPedido status) {
         return pedidoService.atualizarStatus(id, status);
+    }
+
+    // somente GERENTE (SecurityConfig + @PreAuthorize no service)
+    @PostMapping("/{id}/cancelamento")
+    public Pedido cancelar(@PathVariable String id, @RequestBody CancelamentoRequest request) {
+        return pedidoService.cancelar(id, request.justificativa());
+    }
+
+    // somente GERENTE, ate 20%
+    @PostMapping("/{id}/desconto")
+    public Pedido aplicarDesconto(@PathVariable String id, @RequestBody DescontoRequest request) {
+        return pedidoService.aplicarDesconto(id, request.percentual(), request.justificativa());
     }
 
     // move para o proximo status do fluxo
