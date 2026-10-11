@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Lista de Pedidos</title>
 </head>
@@ -11,6 +12,9 @@
         <h2 class="fw-bold mb-0">
             <i class="bi bi-bag me-2 text-primary"></i>Pedidos
         </h2>
+        <a th:href="@{/pedidos/novo}" class="btn btn-primary" sec:authorize="hasAnyRole('GERENTE','ATENDENTE')">
+            <i class="bi bi-plus-lg me-1"></i> Novo Pedido
+        </a>
     </div>
 
     <!-- Mensagens de feedback -->
@@ -34,14 +38,17 @@
                         <th class="ps-4">Entrada</th>
                         <th>Cliente</th>
                         <th>Itens</th>
+                        <th>Tipo</th>
                         <th>Total</th>
                         <th>Status</th>
+                        <th>Saída</th>
+                        <th class="text-end pe-4">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Lista vazia -->
                     <tr th:if="${#lists.isEmpty(pedidos)}">
-                        <td colspan="5" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                             Nenhum pedido encontrado.
                         </td>
@@ -49,21 +56,60 @@
                     <!-- Linhas -->
                     <tr th:each="pedido : ${pedidos}">
                         <td class="ps-4 small">
-                            <div th:text="${pedido.dataHoraEntrada != null} ? ${#temporals.format(pedido.dataHoraEntrada, 'dd/MM/yyyy HH:mm')} : '—'"></div>
+                            <div th:text="${pedido.dataHoraEntrada != null} ? ${#temporals.format(pedido.dataHoraEntrada, 'dd/MM HH:mm')} : '—'"></div>
                             <div class="text-muted" th:text="${pedido.registradoPor}"></div>
                         </td>
                         <td th:text="${pedido.clienteNome}"></td>
                         <td class="small">
                             <div th:each="item : ${pedido.itens}" th:text="${item.quantidade + 'x ' + item.nomeProduto}"></div>
                         </td>
-                        <td th:text="${'R$ ' + #numbers.formatDecimal(pedido.valorTotal, 1, 'POINT', 2, 'COMMA')}"></td>
+                        <td class="small" th:text="${pedido.tipoEntrega}"></td>
+                        <td class="text-nowrap">
+                            <div th:text="${'R$ ' + #numbers.formatDecimal(pedido.valorTotal, 1, 'POINT', 2, 'COMMA')}"></div>
+                            <small class="text-success" th:if="${pedido.percentualDesconto != null and pedido.percentualDesconto.signum() > 0}"
+                                   th:text="${'-' + #numbers.formatDecimal(pedido.percentualDesconto, 1, 'POINT', 2, 'COMMA') + '%'}"></small>
+                        </td>
                         <td>
                             <span class="badge"
                                   th:classappend="${pedido.status?.name() == 'FINALIZADO'} ? 'bg-success' :
                                                   (${pedido.status?.name() == 'CANCELADO'} ? 'bg-danger' :
-                                                  (${pedido.status?.name() == 'EM_PREPARACAO'} ? 'bg-warning text-dark' : 'bg-secondary'))"
+                                                  (${pedido.status?.name() == 'EM_PREPARACAO'} ? 'bg-warning text-dark' :
+                                                  (${pedido.status?.name() == 'PRONTO'} ? 'bg-info text-dark' :
+                                                  (${pedido.status != null and pedido.status.ehSaida()} ? 'bg-primary' : 'bg-secondary'))))"
                                   th:text="${pedido.status?.descricao}">
                             </span>
+                        </td>
+                        <td class="small">
+                            <th:block th:if="${pedido.dataHoraSaida != null}">
+                                <div th:text="${#temporals.format(pedido.dataHoraSaida, 'dd/MM HH:mm')}"></div>
+                                <div class="text-muted" th:text="${pedido.saidaRegistradaPor}"></div>
+                            </th:block>
+                            <span th:if="${pedido.dataHoraSaida == null}" class="text-muted">—</span>
+                        </td>
+                        <td class="text-end pe-4 text-nowrap">
+                            <a th:href="@{/pedidos/{id}(id=${pedido.id})}" class="btn btn-sm btn-outline-secondary" title="Detalhes">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <th:block sec:authorize="hasAnyRole('GERENTE','ATENDENTE')">
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        th:if="${pedido.proximoStatus != null}"
+                                        th:data-id="${pedido.id}"
+                                        th:data-proximo="${pedido.proximoStatus.descricao}"
+                                        onclick="avancarPedido(this.dataset.id, this.dataset.proximo)">
+                                    <i class="bi bi-arrow-right"></i> <span th:text="${pedido.proximoStatus.descricao}"></span>
+                                </button>
+                            </th:block>
+                            <th:block sec:authorize="hasRole('GERENTE')"
+                                      th:if="${pedido.status != null and pedido.status.permiteCancelamentoOuDesconto()}">
+                                <button type="button" class="btn btn-sm btn-outline-warning" title="Desconto"
+                                        th:data-id="${pedido.id}" onclick="descontoPedido(this.dataset.id)">
+                                    <i class="bi bi-percent"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar"
+                                        th:data-id="${pedido.id}" onclick="cancelarPedido(this.dataset.id)">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </th:block>
                         </td>
                     </tr>
                 </tbody>
@@ -74,6 +120,7 @@
         </div>
     </div>
 
+    <script th:src="@{/js/pedidos.js}"></script>
 </div>
 
 </body>

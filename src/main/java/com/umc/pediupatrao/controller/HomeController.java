@@ -136,6 +136,28 @@ public class HomeController {
         return "layout";
     }
 
+    @GetMapping("/pedidos/novo")
+    public String novoPedidoForm(Model model) {
+        model.addAttribute("clientes", clienteService.listarClientes());
+        model.addAttribute("produtos", produtoService.listarProdutos().stream()
+                .filter(p -> !Boolean.FALSE.equals(p.getAtivo()) && p.getPreco() != null)
+                .toList());
+        model.addAttribute("content", "pedidos/form :: content");
+        return "layout";
+    }
+
+    @GetMapping("/pedidos/{id}")
+    public String detalhePedido(@PathVariable String id, Model model, RedirectAttributes redirectAttributes) {
+        try {
+            model.addAttribute("pedido", pedidoService.buscarPorId(id));
+        } catch (RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/pedidos";
+        }
+        model.addAttribute("content", "pedidos/detalhe :: content");
+        return "layout";
+    }
+
     // ========================
     // PRODUTOS
     // ========================
