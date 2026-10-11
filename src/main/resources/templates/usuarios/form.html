@@ -16,6 +16,8 @@
         </h2>
     </div>
 
+    <div class="alert alert-danger" th:if="${erro}" th:text="${erro}" style="max-width: 540px;"></div>
+
     <div class="card shadow-sm" style="max-width: 540px;">
         <div class="card-body p-4">
 
@@ -64,12 +66,17 @@
                     <label for="role" class="form-label fw-medium">
                         <i class="bi bi-shield me-1"></i>Perfil
                     </label>
-                    <select id="role" class="form-select" th:field="*{role}" required>
-                        <option value="" disabled>Selecione um perfil</option>
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="GERENTE">GERENTE</option>
-                        <option value="ATENDENTE">ATENDENTE</option>
-                    </select>
+                    <!-- editando a propria conta: perfil fica travado (o backend tambem bloqueia) -->
+                    <th:block th:with="proprio=${usuario.id != null and usuario.username == #authentication.name}">
+                        <select id="role" class="form-select" th:field="*{role}" th:disabled="${proprio}" required>
+                            <option value="" disabled>Selecione um perfil</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="GERENTE">GERENTE</option>
+                            <option value="ATENDENTE">ATENDENTE</option>
+                        </select>
+                        <input type="hidden" name="role" th:if="${proprio}" th:value="${usuario.role}"/>
+                        <small class="text-muted" th:if="${proprio}">Você não pode alterar o seu próprio perfil.</small>
+                    </th:block>
                 </div>
 
                 <!-- Botões -->
