@@ -162,7 +162,10 @@ public class HomeController {
 
     @GetMapping("/clientes/novo")
     public String novoClienteForm(Model model) {
-        model.addAttribute("cliente", new Cliente());
+        // se voltou de um erro de validacao, mantem o que foi digitado
+        if (!model.containsAttribute("cliente")) {
+            model.addAttribute("cliente", new Cliente());
+        }
         model.addAttribute("content", "clientes/form :: content");
         return "layout";
     }
@@ -170,7 +173,13 @@ public class HomeController {
     @PostMapping("/clientes/salvar")
     public String salvarCliente(@ModelAttribute Cliente cliente,
             RedirectAttributes redirectAttributes) {
-        clienteService.salvar(cliente);
+        try {
+            clienteService.novoCliente(cliente);
+        } catch (RegraNegocioException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("cliente", cliente);
+            return "redirect:/clientes/novo";
+        }
         redirectAttributes.addFlashAttribute("sucesso", "Cliente criado com sucesso!");
         return "redirect:/clientes";
     }
@@ -197,7 +206,15 @@ public class HomeController {
             @ModelAttribute Cliente cliente,
             RedirectAttributes redirectAttributes) {
         cliente.setId(id);
-        clienteService.salvar(cliente);
+        try {
+            clienteService.salvar(cliente);
+        } catch (RegraNegocioException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/clientes/editar/" + id;
+        } catch (RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/clientes";
+        }
         redirectAttributes.addFlashAttribute("sucesso", "Cliente atualizado com sucesso!");
         return "redirect:/clientes";
     }

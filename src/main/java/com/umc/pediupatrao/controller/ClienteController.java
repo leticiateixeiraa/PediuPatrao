@@ -26,9 +26,16 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Cliente> buscarPorId(@PathVariable String id) {
+        return clienteService.buscarPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public ResponseEntity<Cliente> salvarCliente(@RequestBody Cliente cliente) {
-        Cliente salvo = clienteService.salvar(cliente);
+        Cliente salvo = clienteService.novoCliente(cliente);
         return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
     }
 
