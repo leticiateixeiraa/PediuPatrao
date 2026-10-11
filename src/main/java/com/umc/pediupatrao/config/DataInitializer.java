@@ -1,7 +1,9 @@
 package com.umc.pediupatrao.config;
 
 import com.umc.pediupatrao.entity.Perfil;
+import com.umc.pediupatrao.entity.Produto;
 import com.umc.pediupatrao.entity.Usuario;
+import com.umc.pediupatrao.repository.ProdutoRepository;
 import com.umc.pediupatrao.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +22,31 @@ public class DataInitializer {
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     @Bean
-    CommandLineRunner initDatabase(UsuarioRepository repo, PasswordEncoder encoder) {
+    CommandLineRunner initDatabase(UsuarioRepository repo, ProdutoRepository produtoRepo, PasswordEncoder encoder) {
         return args -> {
             criarSeNaoExistir(repo, encoder, "admin", "teste123", Perfil.ADMIN);
             criarSeNaoExistir(repo, encoder, "gerente", "teste123", Perfil.GERENTE);
             criarSeNaoExistir(repo, encoder, "atendente01", "teste123", Perfil.ATENDENTE);
+
+            // cardapio basico pra conseguir lancar pedido numa base nova
+            if (produtoRepo.count() == 0) {
+                produtoRepo.save(produto("Pizza Calabresa", "Pizza", 45.90));
+                produtoRepo.save(produto("Pizza Mussarela", "Pizza", 42.00));
+                produtoRepo.save(produto("Pizza Portuguesa", "Pizza", 52.50));
+                produtoRepo.save(produto("Esfiha de Carne", "Esfiha", 6.50));
+                produtoRepo.save(produto("Refrigerante 2L", "Bebida", 12.00));
+                log.info("Produtos iniciais cadastrados");
+            }
         };
+    }
+
+    private Produto produto(String nome, String tipo, double preco) {
+        Produto p = new Produto();
+        p.setNome(nome);
+        p.setTipo(tipo);
+        p.setPreco(preco);
+        p.setAtivo(true);
+        return p;
     }
 
     private void criarSeNaoExistir(UsuarioRepository repo, PasswordEncoder encoder,

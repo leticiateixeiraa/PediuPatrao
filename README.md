@@ -40,6 +40,9 @@ Na primeira execução o `DataInitializer` cria um usuário de cada perfil (senh
 | `gerente`     | GERENTE   |
 | `atendente01` | ATENDENTE |
 
+Se a coleção de produtos estiver vazia, também são cadastrados alguns produtos (pizzas, esfiha e refrigerante)
+pra já dar pra lançar pedidos.
+
 ### Testes
 
 ```bash
