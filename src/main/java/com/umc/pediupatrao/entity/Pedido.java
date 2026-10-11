@@ -1,67 +1,90 @@
 package com.umc.pediupatrao.entity;
 
-import jakarta.persistence.Entity;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
 
 @Document(collection = "pedidos")
-@Entity
 public class Pedido {
+
     @Id
     private String id;
+
+    // evita que duas pessoas alterem o mesmo pedido ao mesmo tempo
+    @Version
+    private Long versao;
+
     private String clienteId;
-    private String tipoPizza;
-    private String status;
-    private int quantidade;
-    private String sabor;
+    private String clienteNome;
+    private TipoEntrega tipoEntrega;
+    private String observacao;
 
-    public String getId() {
-        return id;
-    }
+    private List<ItemPedido> itens = new ArrayList<>();
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    // ===== valores (sempre calculados no servidor) =====
+    @Field(targetType = FieldType.DECIMAL128)
+    private BigDecimal subtotal = BigDecimal.ZERO;
 
-    public String getClienteId() {
-        return clienteId;
-    }
+    @Field(targetType = FieldType.DECIMAL128)
+    private BigDecimal percentualDesconto = BigDecimal.ZERO;
 
-    public void setClienteId(String clienteId) {
-        this.clienteId = clienteId;
-    }
+    @Field(targetType = FieldType.DECIMAL128)
+    private BigDecimal valorDesconto = BigDecimal.ZERO;
 
-    public String getTipoPizza() {
-        return tipoPizza;
-    }
+    @Field(targetType = FieldType.DECIMAL128)
+    private BigDecimal valorTotal = BigDecimal.ZERO;
 
-    public void setTipoPizza(String tipoPizza) {
-        this.tipoPizza = tipoPizza;
-    }
+    private StatusPedido status;
 
-    public String getStatus() {
-        return status;
-    }
+    // ===== entrada =====
+    private String registradoPor;
+    private LocalDateTime dataHoraEntrada;
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public int getQuantidade() {
-        return quantidade;
-    }
+    public Long getVersao() { return versao; }
+    public void setVersao(Long versao) { this.versao = versao; }
 
-    public void setQuantidade(int quantidade) {
-        this.quantidade = quantidade;
-    }
+    public String getClienteId() { return clienteId; }
+    public void setClienteId(String clienteId) { this.clienteId = clienteId; }
 
-    public String getSabor() {
-        return sabor;
-    }
+    public String getClienteNome() { return clienteNome; }
+    public void setClienteNome(String clienteNome) { this.clienteNome = clienteNome; }
 
-    public void setSabor(String sabor) {
-        this.sabor = sabor;
-    }
-    
-    
+    public TipoEntrega getTipoEntrega() { return tipoEntrega; }
+    public void setTipoEntrega(TipoEntrega tipoEntrega) { this.tipoEntrega = tipoEntrega; }
+
+    public String getObservacao() { return observacao; }
+    public void setObservacao(String observacao) { this.observacao = observacao; }
+
+    public List<ItemPedido> getItens() { return itens; }
+    public void setItens(List<ItemPedido> itens) { this.itens = itens; }
+
+    public BigDecimal getSubtotal() { return subtotal; }
+    public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
+
+    public BigDecimal getPercentualDesconto() { return percentualDesconto; }
+    public void setPercentualDesconto(BigDecimal percentualDesconto) { this.percentualDesconto = percentualDesconto; }
+
+    public BigDecimal getValorDesconto() { return valorDesconto; }
+    public void setValorDesconto(BigDecimal valorDesconto) { this.valorDesconto = valorDesconto; }
+
+    public BigDecimal getValorTotal() { return valorTotal; }
+    public void setValorTotal(BigDecimal valorTotal) { this.valorTotal = valorTotal; }
+
+    public StatusPedido getStatus() { return status; }
+    public void setStatus(StatusPedido status) { this.status = status; }
+
+    public String getRegistradoPor() { return registradoPor; }
+    public void setRegistradoPor(String registradoPor) { this.registradoPor = registradoPor; }
+
+    public LocalDateTime getDataHoraEntrada() { return dataHoraEntrada; }
+    public void setDataHoraEntrada(LocalDateTime dataHoraEntrada) { this.dataHoraEntrada = dataHoraEntrada; }
 }
