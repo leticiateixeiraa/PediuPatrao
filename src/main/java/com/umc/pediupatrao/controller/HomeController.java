@@ -64,7 +64,9 @@ public class HomeController {
 
     @GetMapping("/usuarios/novo")
     public String novoUsuarioForm(Model model) {
-        model.addAttribute("usuario", new Usuario());
+        if (!model.containsAttribute("usuario")) {
+            model.addAttribute("usuario", new Usuario());
+        }
         model.addAttribute("content", "usuarios/form :: content");
         return "layout";
     }
@@ -73,6 +75,9 @@ public class HomeController {
     public String editarUsuarioForm(@PathVariable String id, Model model,
             RedirectAttributes redirectAttributes) {
         boolean encontrado = usuarioService.buscarPorId(id).map(u -> {
+            // nao manda o hash da senha para o formulario (senao ele volta no submit
+            // e vira a "nova senha"). Campo vazio = mantem a senha atual
+            u.setPassword(null);
             model.addAttribute("usuario", u);
             return true;
         }).orElse(false);
