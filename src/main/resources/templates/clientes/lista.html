@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <title>Lista de Clientes</title>
 </head>
@@ -9,7 +10,7 @@
         <h2 class="fw-bold mb-0">
             <i class="bi bi-person-raised-hand me-2 text-primary"></i>Clientes
         </h2>
-        <a href="/clientes/novo" class="btn btn-primary">
+        <a href="/clientes/novo" class="btn btn-primary" sec:authorize="hasRole('ATENDENTE')">
             <i class="bi bi-plus-lg me-1"></i> Novo Cliente
         </a>
     </div>
@@ -33,8 +34,20 @@
         </div>
     </div>
 
-    <script>
+    <div class="alert alert-success alert-dismissible fade show mt-3" th:if="${sucesso}" role="alert">
+        <span th:text="${sucesso}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div class="alert alert-danger alert-dismissible fade show mt-3" th:if="${erro}" role="alert">
+        <span th:text="${erro}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <script th:inline="javascript">
         const API_URL = '/api/clientes';
+        // so controla o que aparece na tela; quem bloqueia de fato e o backend
+        const podeEditar = /*[[${#authorization.expression('hasRole(''ATENDENTE'')')}]]*/ false;
+        const podeExcluir = /*[[${#authorization.expression('hasRole(''GERENTE'')')}]]*/ false;
         const tabelaClientes = document.getElementById('clientes-tabela');
 
         function formatarEndereco(cliente) {
@@ -51,8 +64,13 @@
         }
 
         async function carregarClientes() {
-            const response = await fetch(API_URL);
-            const clientes = await response.json();
+            let clientes = [];
+            try {
+                clientes = await apiFetch(API_URL);
+            } catch (e) {
+                tabelaClientes.innerHTML = `<tr><td colspan="4" class="text-danger p-4">${escapeHtml(e.message)}</td></tr>`;
+                return;
+            }
             tabelaClientes.innerHTML = '';
 
             if (clientes.length === 0) {
@@ -69,16 +87,16 @@
             clientes.forEach(cliente => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${cliente.nome || '—'}</td>
-                    <td>${cliente.telefone || '—'}</td>
-                    <td>${formatarEndereco(cliente)}</td>
+                    <td>${escapeHtml(cliente.nome) || '—'}</td>
+                    <td>${escapeHtml(cliente.telefone) || '—'}</td>
+                    <td>${escapeHtml(formatarEndereco(cliente))}</td>
                     <td class="text-end pe-4">
-                        <a href="/clientes/editar/${cliente.id}" class="btn btn-sm btn-outline-primary me-1">
+                        ${podeEditar ? `<a href="/clientes/editar/${encodeURIComponent(cliente.id)}" class="btn btn-sm btn-outline-primary me-1">
                             <i class="bi bi-pencil-fill"></i> Editar
-                        </a>
-                        <button class="btn btn-sm btn-outline-danger" onclick="excluirCliente('${cliente.id}')">
+                        </a>` : ''}
+                        ${podeExcluir ? `<button class="btn btn-sm btn-outline-danger" onclick="excluirCliente('${escapeHtml(cliente.id)}')">
                             <i class="bi bi-trash-fill"></i> Excluir
-                        </button>
+                        </button>` : ''}
                     </td>
                 `;
                 tabelaClientes.appendChild(row);
@@ -87,12 +105,12 @@
 
         async function excluirCliente(id) {
             if (confirm('Tem certeza que deseja excluir este cliente?')) {
-                const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                if (response.ok) {
+                try {
+                    await apiFetch(`${API_URL}/${encodeURIComponent(id)}`, { method: 'DELETE' });
                     alert('Cliente excluído com sucesso!');
                     carregarClientes();
-                } else {
-                    alert('Erro ao excluir o cliente.');
+                } catch (e) {
+                    alert('Erro ao excluir o cliente: ' + e.message);
                 }
             }
         }

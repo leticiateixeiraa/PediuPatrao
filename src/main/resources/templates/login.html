@@ -36,7 +36,10 @@
             <!-- Espaço para a logo -->
             <img th:src="@{/images/logo.png}" alt="Logo" class="logo">
             <h3 class="mb-4">Bem-vindo</h3>
-            
+
+            <div class="alert alert-danger py-2" th:if="${param.error}">Usuário ou senha inválidos.</div>
+            <div class="alert alert-success py-2" th:if="${param.logout}">Você saiu do sistema.</div>
+
             <!-- Formulário de Login -->
             <form th:action="@{/login}" method="post">
                 <div class="form-group mb-3">
