@@ -129,7 +129,7 @@ public class PedidoService {
         }
 
         // guarda os valores anteriores para a auditoria
-        String itensAntes = pedido.getItens().toString();
+        List<ItemPedido> itensAntes = pedido.getItens(); // a lista e trocada abaixo, entao essa fica intacta
         TipoEntrega tipoAntes = pedido.getTipoEntrega();
         String observacaoAntes = pedido.getObservacao();
         BigDecimal subtotalAntes = pedido.getSubtotal();
@@ -144,7 +144,7 @@ public class PedidoService {
         Pedido salvo = pedidoRepository.save(pedido);
 
         Alteracoes alteracoes = new Alteracoes()
-                .campo("itens", itensAntes, salvo.getItens().toString())
+                .campo("itens", itensAntes, salvo.getItens())
                 .campo("tipoEntrega", tipoAntes, salvo.getTipoEntrega())
                 .campo("observacao", observacaoAntes, salvo.getObservacao())
                 .campo("subtotal", subtotalAntes, salvo.getSubtotal())
