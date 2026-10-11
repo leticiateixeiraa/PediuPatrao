@@ -1,5 +1,8 @@
 package com.umc.pediupatrao.service;
 
+import com.umc.pediupatrao.auditoria.Alteracoes;
+import com.umc.pediupatrao.auditoria.AuditoriaService;
+import com.umc.pediupatrao.auditoria.TipoOperacao;
 import com.umc.pediupatrao.entity.Perfil;
 import com.umc.pediupatrao.entity.Usuario;
 import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
@@ -21,16 +24,19 @@ import java.util.Optional;
 public class UsuarioService {
 
     private static final int TAMANHO_MINIMO_SENHA = 6;
+    private static final String ENTIDADE = "USUARIO";
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioLogado usuarioLogado;
+    private final AuditoriaService auditoriaService;
 
     public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder,
-                          UsuarioLogado usuarioLogado) {
+                          UsuarioLogado usuarioLogado, AuditoriaService auditoriaService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.usuarioLogado = usuarioLogado;
+        this.auditoriaService = auditoriaService;
     }
 
     // Busca um usuário por ID
@@ -61,7 +67,12 @@ public class UsuarioService {
         novo.setUsername(username);
         novo.setPassword(passwordEncoder.encode(usuario.getPassword()));
         novo.setRole(validarPerfil(usuario.getRole()).name());
-        return usuarioRepository.save(novo);
+        Usuario salvo = usuarioRepository.save(novo);
+
+        // senha nunca vai para a auditoria
+        auditoriaService.registrar(TipoOperacao.INCLUSAO_USUARIO, ENTIDADE, salvo.getId(),
+                new Alteracoes().novo("username", salvo.getUsername()).novo("perfil", salvo.getRole()), null);
+        return salvo;
     }
 
     // Atualiza o usuário (username, perfil e opcionalmente a senha)
@@ -87,6 +98,10 @@ public class UsuarioService {
             garantirQueNaoEhUltimoAdmin();
         }
 
+        Alteracoes alteracoes = new Alteracoes()
+                .campo("username", existente.getUsername(), novoUsername)
+                .campo("perfil", perfilAtual, novoPerfil);
+
         existente.setUsername(novoUsername);
         existente.setRole(novoPerfil.name());
 
@@ -96,7 +111,11 @@ public class UsuarioService {
             existente.setPassword(passwordEncoder.encode(usuarioAtualizado.getPassword()));
         }
 
-        return usuarioRepository.save(existente);
+        Usuario salvo = usuarioRepository.save(existente);
+        if (!alteracoes.vazia()) {
+            auditoriaService.registrar(TipoOperacao.ALTERACAO_USUARIO, ENTIDADE, salvo.getId(), alteracoes, null);
+        }
+        return salvo;
     }
 
     // Deleta um usuário pelo ID
@@ -112,6 +131,8 @@ public class UsuarioService {
             garantirQueNaoEhUltimoAdmin();
         }
         usuarioRepository.deleteById(id);
+        auditoriaService.registrar(TipoOperacao.EXCLUSAO_USUARIO, ENTIDADE, id,
+                new Alteracoes().campo("username", existente.getUsername(), null), null);
     }
 
     private void garantirQueNaoEhUltimoAdmin() {
