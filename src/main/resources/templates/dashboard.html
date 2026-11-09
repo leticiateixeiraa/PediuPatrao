@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="container-fluid dashboard-page py-3" th:fragment="content">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <p class="dashboard-eyebrow mb-1">VISÃO DA OPERAÇÃO</p>
+            <h1 class="h2 mb-1">Dashboard</h1>
+            <p class="text-muted mb-0">Acompanhe vendas, pedidos e produtos em um só lugar.</p>
+        </div>
+        <span class="dashboard-updated small text-muted" id="dashboardUpdated">Carregando dados...</span>
+    </div>
+
+    <form class="dashboard-filters row g-3 align-items-end mb-4" id="dashboardFilters">
+        <div class="col-12 col-sm-5 col-lg-3">
+            <label for="dashboardStart" class="form-label">Data inicial</label>
+            <input id="dashboardStart" name="inicio" type="date" class="form-control" required>
+        </div>
+        <div class="col-12 col-sm-5 col-lg-3">
+            <label for="dashboardEnd" class="form-label">Data final</label>
+            <input id="dashboardEnd" name="fim" type="date" class="form-control" required>
+        </div>
+        <div class="col-12 col-sm-2">
+            <button type="submit" class="btn btn-primary w-100" id="dashboardFilterButton">
+                <i class="bi bi-funnel me-1"></i> Filtrar
+            </button>
+        </div>
+    </form>
+
+    <div class="alert alert-danger d-none" id="dashboardError" role="alert"></div>
+    <div class="dashboard-loading text-center py-5 d-none" id="dashboardLoading" aria-live="polite">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+        <p class="text-muted mt-2 mb-0">Atualizando informações...</p>
+    </div>
+
+    <div id="dashboardContent">
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="dashboard-card h-100">
+                    <div class="dashboard-card-icon bg-primary-subtle text-primary"><i class="bi bi-cash-stack"></i></div>
+                    <p class="dashboard-card-label">Faturamento</p>
+                    <p class="dashboard-card-value" id="metricRevenue">—</p>
+                    <small class="text-muted">Pedidos finalizados no período</small>
+                </article>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="dashboard-card h-100">
+                    <div class="dashboard-card-icon bg-success-subtle text-success"><i class="bi bi-receipt"></i></div>
+                    <p class="dashboard-card-label">Pedidos</p>
+                    <p class="dashboard-card-value" id="metricOrders">—</p>
+                    <small class="text-muted" id="metricCompleted">— finalizados</small>
+                </article>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="dashboard-card h-100">
+                    <div class="dashboard-card-icon bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i></div>
+                    <p class="dashboard-card-label">Em andamento</p>
+                    <p class="dashboard-card-value" id="metricInProgress">—</p>
+                    <small class="text-muted">Pedidos ainda não finalizados</small>
+                </article>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <article class="dashboard-card h-100">
+                    <div class="dashboard-card-icon bg-info-subtle text-info"><i class="bi bi-graph-up-arrow"></i></div>
+                    <p class="dashboard-card-label">Ticket médio</p>
+                    <p class="dashboard-card-value" id="metricTicket">—</p>
+                    <small class="text-muted" id="metricCanceled">— cancelados</small>
+                </article>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-xl-8">
+                <section class="dashboard-panel h-100">
+                    <div class="dashboard-panel-heading">
+                        <div>
+                            <h2 class="h5 mb-1">Vendas no período</h2>
+                            <p class="text-muted small mb-0">Faturamento por dia ou mês</p>
+                        </div>
+                    </div>
+                    <div class="dashboard-chart-wrap"><canvas id="salesChart" aria-label="Gráfico de faturamento"></canvas></div>
+                </section>
+            </div>
+            <div class="col-12 col-xl-4">
+                <section class="dashboard-panel h-100">
+                    <div class="dashboard-panel-heading">
+                        <div>
+                            <h2 class="h5 mb-1">Situação dos pedidos</h2>
+                            <p class="text-muted small mb-0">Distribuição por status</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table dashboard-table mb-0">
+                            <thead><tr><th>Status</th><th class="text-end">Quantidade</th></tr></thead>
+                            <tbody id="orderStatusRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <section class="dashboard-panel h-100">
+                    <div class="dashboard-panel-heading">
+                        <div>
+                            <h2 class="h5 mb-1">Produtos mais vendidos</h2>
+                            <p class="text-muted small mb-0">Itens de pedidos finalizados</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table dashboard-table mb-0">
+                            <thead><tr><th>Produto</th><th class="text-end">Unidades vendidas</th></tr></thead>
+                            <tbody id="topProductRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-lg-7">
+                <section class="dashboard-panel h-100">
+                    <div class="dashboard-panel-heading">
+                        <div>
+                            <h2 class="h5 mb-1">Pedidos recentes</h2>
+                            <p class="text-muted small mb-0">Últimos pedidos do período selecionado</p>
+                        </div>
+                        <a th:href="@{/pedidos}" class="small text-decoration-none">Ver pedidos</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table dashboard-table mb-0">
+                            <thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th class="text-end">Total</th></tr></thead>
+                            <tbody id="recentOrderRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+    <script th:src="@{/plugins/chart.js/Chart.min.js}"></script>
+    <script th:src="@{/js/dashboard.js}"></script>
+</section>
+</body>
+</html>

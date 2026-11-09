@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.umc.pediupatrao.auditoria.AuditoriaService;
 import com.umc.pediupatrao.config.SecurityConfig;
 import com.umc.pediupatrao.entity.Pedido;
+import com.umc.pediupatrao.service.DashboardService;
 import com.umc.pediupatrao.service.ClienteService;
 import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.UsuarioDetailsService;
@@ -35,7 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Garante que as restricoes estao no backend: chamadas diretas na API
  * com o perfil errado recebem 403, mesmo sem passar pela tela.
  */
-@WebMvcTest(controllers = {PedidoController.class, AuditoriaController.class,
+@WebMvcTest(controllers = {PedidoController.class, DashboardApiController.class, AuditoriaController.class,
         ClienteController.class, UsuarioController.class})
 @Import(SecurityConfig.class)
 class SegurancaApiTest {
@@ -48,6 +49,8 @@ class SegurancaApiTest {
 
     @MockitoBean
     private PedidoService pedidoService;
+    @MockitoBean
+    private DashboardService dashboardService;
     @MockitoBean
     private AuditoriaService auditoriaService;
     @MockitoBean
@@ -134,6 +137,18 @@ class SegurancaApiTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
         mvc.perform(put("/api/pedidos/1/avancar").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gerente", roles = "GERENTE")
+    void gerenteConsultaDashboard() throws Exception {
+        mvc.perform(get("/api/dashboard")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "atendente01", roles = "ATENDENTE")
+    void atendenteNaoConsultaDashboard() throws Exception {
+        mvc.perform(get("/api/dashboard")).andExpect(status().isForbidden());
     }
 
     @Test
