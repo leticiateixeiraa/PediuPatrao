@@ -20,14 +20,14 @@ Acesse http://localhost:8080
 
 ### Banco de dados
 
-Por padrão a aplicação usa o cluster MongoDB Atlas da disciplina, mas numa base separada (`pediupatrao_m1p2`)
-pra não misturar com os dados de outros projetos. Dá pra trocar por variáveis de ambiente:
+Por padrão a aplicação conecta ao MongoDB local em `localhost:27017`, usando uma base separada
+(`pediupatrao_m1p2`) pra não misturar com os dados de outros projetos. Para usar Atlas ou outro servidor,
+configure `MONGODB_URI` e `MONGODB_DATABASE`. No PowerShell:
 
 ```bash
-# exemplo com MongoDB local
-export MONGODB_URI=mongodb://localhost:27017
-export MONGODB_DATABASE=pediupatrao
-./mvnw spring-boot:run
+$env:MONGODB_URI = "mongodb://localhost:27017"
+$env:MONGODB_DATABASE = "pediupatrao_m1p2"
+.\mvnw.cmd spring-boot:run
 ```
 
 ### Usuários iniciais
@@ -161,10 +161,44 @@ Integridade e proteção de dados:
 | POST   | `/api/pedidos/{id}/cancelamento`      | GERENTE             |
 | POST   | `/api/pedidos/{id}/desconto`          | GERENTE             |
 | GET    | `/api/auditoria`                      | ADMIN, GERENTE      |
+| GET    | `/api/dashboard?inicio=AAAA-MM-DD&fim=AAAA-MM-DD` | ADMIN, GERENTE |
 | *      | `/api/usuarios/**`                    | ADMIN               |
 
 Erros da API seguem o formato `{"status": 422, "erro": "mensagem", "dataHora": "..."}`
 (422 regra de negócio, 409 transição inválida, 404 não encontrado, 403 sem permissão).
+
+## Dashboard administrativo
+
+A tela `/dashboard` consome `GET /api/dashboard` e está disponível para ADMIN e GERENTE. O endpoint aceita
+`inicio` e `fim` opcionais no formato ISO (`AAAA-MM-DD`); sem parâmetros, considera o mês atual até hoje.
+Datas inicial e final são inclusivas. Exemplo:
+
+```http
+GET /api/dashboard?inicio=2026-09-01&fim=2026-09-30
+```
+
+A resposta agrega os pedidos persistidos no MongoDB e contém:
+
+- `indicadores`: total de pedidos, pedidos em andamento, cancelados e finalizados, faturamento e ticket médio;
+- `pedidosPorStatus`: contagem de cada situação do fluxo, inclusive situações sem pedidos no período;
+- `vendasPorPeriodo`: faturamento de pedidos finalizados por dia (períodos de até 31 dias) ou por mês;
+- `produtosMaisVendidos`: cinco produtos com mais unidades em pedidos finalizados;
+- `pedidosRecentes`: até cinco pedidos mais recentes, incluindo status em andamento e cancelados.
+
+Faturamento, ticket médio e ranking de produtos consideram somente pedidos FINALIZADOS. Pedidos cancelados
+continuam nas contagens de situação, mas não são tratados como venda. As consultas de data são filtradas no
+repositório MongoDB; o navegador atualiza os dados ao aplicar os filtros e a cada minuto. O gráfico usa a
+biblioteca Chart.js já incluída no projeto.
+
+### Demonstração em vídeo (roteiro de até 3 minutos)
+
+1. **0:00–0:25** — Entrar como gerente e abrir Dashboard; explicar filtros por período e acesso restrito.
+2. **0:25–1:10** — Mostrar os indicadores, alterar as datas e explicar que faturamento/ticket consideram
+   pedidos finalizados; mostrar a atualização do gráfico.
+3. **1:10–1:50** — Apresentar a distribuição dos status e o ranking de produtos vendidos.
+4. **1:50–2:20** — Abrir um pedido recente pela tabela e relacionar a tela aos dados da API MongoDB.
+5. **2:20–3:00** — Demonstrar `GET /api/dashboard?inicio=...&fim=...` no navegador ou Postman e explicar
+   a resposta agregada e a permissão de acesso ADMIN/GERENTE.
 
 ## Testando o bloqueio direto na API
 
@@ -201,11 +235,11 @@ Fazendo o mesmo logado como **admin**, o cancelamento também retorna 403 (só o
 src/main/java/com/umc/pediupatrao
 ├── auditoria/      RegistroAuditoria, repositório, service, Alteracoes, MascaraDados
 ├── config/         SecurityConfig, DataInitializer, ClockConfig, MongoInitConfig
-├── controller/     APIs REST, HomeController (telas), ApiExceptionHandler
-├── dto/            PedidoRequest, ItemPedidoRequest, CancelamentoRequest, DescontoRequest
+├── controller/     APIs REST, dashboard, HomeController (telas), ApiExceptionHandler
+├── dto/            DTOs de pedidos e DashboardResponse
 ├── entity/         Pedido, ItemPedido, StatusPedido, TipoEntrega, HistoricoStatus, Perfil...
 ├── exception/      RegraNegocioException, TransicaoInvalidaException, RecursoNaoEncontradoException
 ├── repository/
 ├── security/       UsuarioLogado
-└── service/        PedidoService, ClienteService, UsuarioService...
+└── service/        PedidoService, DashboardService, ClienteService, UsuarioService...
 ```
