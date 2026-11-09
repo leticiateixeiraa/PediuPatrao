@@ -35,6 +35,7 @@ body {
 #content {
     flex-grow: 1;
     padding: 20px;
+    min-width: 0; /* deixa os graficos encolherem junto com a tela */
 }
 
 @media (max-width: 768px) {
@@ -62,4 +63,33 @@ body {
         z-index: 1100;
         cursor: pointer;
     }
+}
+
+/* ===== dashboard ===== */
+.dashboard .kpi-titulo {
+    font-size: .8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.dashboard .kpi-valor {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: .25rem 0;
+    white-space: nowrap;
+}
+
+.dashboard .kpi-sub {
+    font-size: .75rem;
+    color: #6c757d;
+}
+
+.dashboard .grafico {
+    position: relative;
+    height: 240px;
+}
+
+.dashboard .grafico-alto {
+    height: 300px;
 }
