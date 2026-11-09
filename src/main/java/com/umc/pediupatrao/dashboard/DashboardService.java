@@ -228,7 +228,9 @@ public class DashboardService {
         List<VendasPorPeriodo> resultado = new ArrayList<>();
         for (Map.Entry<LocalDate, long[]> e : quantidades.entrySet()) {
             LocalDate data = e.getKey();
-            resultado.add(new VendasPorPeriodo(chaveTexto(data, ag), rotulo(data, ag),
+            // a primeira semana/mes pode comecar antes do filtro: o rotulo mostra a data real de inicio
+            LocalDate inicioRotulo = data.isBefore(periodo.inicio()) ? periodo.inicio() : data;
+            resultado.add(new VendasPorPeriodo(chaveTexto(data, ag), rotulo(inicioRotulo, ag),
                     e.getValue()[0], valores.get(data).setScale(2, RoundingMode.HALF_UP)));
         }
         return resultado;

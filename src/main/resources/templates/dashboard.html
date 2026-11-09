@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+<div th:fragment="content" class="dashboard">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="fw-bold mb-0">
+            <i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard
+        </h2>
+        <div class="d-flex align-items-center gap-3 small text-muted">
+            <span id="ultimaAtualizacao">Carregando…</span>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="autoAtualizar" checked>
+                <label class="form-check-label" for="autoAtualizar">Atualizar a cada 60 s</label>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAtualizar">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- RF05: filtros -->
+    <form id="formFiltros" class="card card-body shadow-sm mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="fDataInicio">De</label>
+                <input type="date" id="fDataInicio" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="fDataFim">Até</label>
+                <input type="date" id="fDataFim" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="fStatus">Status</label>
+                <select id="fStatus" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="RECEBIDO">Recebido</option>
+                    <option value="EM_PREPARACAO">Em preparação</option>
+                    <option value="PRONTO">Pronto</option>
+                    <option value="SAIU_PARA_ENTREGA">Saiu para entrega</option>
+                    <option value="RETIRADO">Retirado</option>
+                    <option value="FINALIZADO">Finalizado</option>
+                    <option value="CANCELADO">Cancelado</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="fTipo">Tipo</label>
+                <select id="fTipo" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="ENTREGA">Entrega</option>
+                    <option value="RETIRADA">Retirada</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1" for="fAgrupamento">Agrupar vendas por</label>
+                <select id="fAgrupamento" class="form-select form-select-sm">
+                    <option value="DIA">Dia</option>
+                    <option value="SEMANA">Semana</option>
+                    <option value="MES">Mês</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLimpar" title="Últimos 30 dias">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-1 mt-2">
+            <button type="button" class="btn btn-light btn-sm atalho-periodo" data-dias="1">Hoje</button>
+            <button type="button" class="btn btn-light btn-sm atalho-periodo" data-dias="7">7 dias</button>
+            <button type="button" class="btn btn-light btn-sm atalho-periodo" data-dias="30">30 dias</button>
+            <button type="button" class="btn btn-light btn-sm atalho-periodo" data-dias="90">90 dias</button>
+        </div>
+    </form>
+
+    <!-- RF07: mensagens de erro / carregando -->
+    <div class="alert alert-danger d-none" id="erroDashboard" role="alert"></div>
+    <div class="text-center text-muted py-2 d-none" id="carregando">
+        <div class="spinner-border spinner-border-sm me-2"></div> Carregando dados…
+    </div>
+
+    <!-- RF01: indicadores -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-xl-2">
+            <div class="card shadow-sm h-100 kpi">
+                <div class="card-body">
+                    <div class="kpi-titulo"><i class="bi bi-cash-coin"></i> Faturamento</div>
+                    <div class="kpi-valor" id="kpiFaturamento">—</div>
+                    <div class="kpi-sub">pedidos não cancelados</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card shadow-sm h-100 kpi">
+                <div class="card-body">
+                    <div class="kpi-titulo"><i class="bi bi-bag-check"></i> Pedidos</div>
+                    <div class="kpi-valor" id="kpiPedidos">—</div>
+                    <div class="kpi-sub" id="kpiPedidosSub">&nbsp;</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card shadow-sm h-100 kpi">
+                <div class="card-body">
+                    <div class="kpi-titulo"><i class="bi bi-receipt"></i> Ticket médio</div>
+                    <div class="kpi-valor" id="kpiTicket">—</div>
+                    <div class="kpi-sub" id="kpiItens">&nbsp;</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card shadow-sm h-100 kpi">
+                <div class="card-body">
+                    <div class="kpi-titulo"><i class="bi bi-hourglass-split"></i> Em andamento</div>
+                    <div class="kpi-valor" id="kpiAndamento">—</div>
+                    <div class="kpi-sub">ainda não finalizados</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card shadow-sm h-100 kpi">
+                <div class="card-body">
+                    <div class="kpi-titulo"><i class="bi bi-x-circle"></i> Cancelamentos</div>
+                    <div class="kpi-valor" id="kpiCancelados">—</div>
+                    <div class="kpi-sub" id="kpiTaxaCancelamento">&nbsp;</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card shadow-sm h-100 kpi">
+                <div class="card-body">
+                    <div class="kpi-titulo"><i class="bi bi-percent"></i> Descontos</div>
+                    <div class="kpi-valor" id="kpiDescontos">—</div>
+                    <div class="kpi-sub">concedidos no período</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RF02: graficos -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-medium">Evolução das vendas</div>
+                <div class="card-body"><div class="grafico grafico-alto"><canvas id="graficoVendas"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-medium">Situação dos pedidos</div>
+                <div class="card-body"><div class="grafico grafico-alto"><canvas id="graficoStatus"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-medium">Produtos mais vendidos</div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6"><div class="grafico"><canvas id="graficoProdutos"></canvas></div></div>
+                        <div class="col-md-6">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr><th>#</th><th>Produto</th><th class="text-end">Qtd.</th><th class="text-end">Faturamento</th></tr>
+                                </thead>
+                                <tbody id="tabelaProdutos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-medium">Entrega x Retirada</div>
+                <div class="card-body"><div class="grafico"><canvas id="graficoTipo"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RF03: pedidos recentes -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white fw-medium d-flex justify-content-between">
+            <span>Pedidos recentes</span>
+            <a th:href="@{/pedidos}" class="small">ver todos</a>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Entrada</th><th>Cliente</th><th>Tipo</th><th>Status</th>
+                        <th class="text-end pe-3">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaRecentes"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/dashboard.js}"></script>
+</div>
+
+</body>
+</html>
