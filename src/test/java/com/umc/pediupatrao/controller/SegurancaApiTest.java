@@ -15,8 +15,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.umc.pediupatrao.auditoria.AuditoriaService;
 import com.umc.pediupatrao.config.SecurityConfig;
+import com.umc.pediupatrao.dashboard.DashboardController;
+import com.umc.pediupatrao.dashboard.DashboardService;
 import com.umc.pediupatrao.entity.Pedido;
-import com.umc.pediupatrao.service.DashboardService;
 import com.umc.pediupatrao.service.ClienteService;
 import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.UsuarioDetailsService;
@@ -36,8 +37,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * Garante que as restricoes estao no backend: chamadas diretas na API
  * com o perfil errado recebem 403, mesmo sem passar pela tela.
  */
-@WebMvcTest(controllers = {PedidoController.class, DashboardApiController.class, AuditoriaController.class,
-        ClienteController.class, UsuarioController.class})
+@WebMvcTest(controllers = {PedidoController.class, AuditoriaController.class,
+        ClienteController.class, UsuarioController.class, DashboardController.class})
 @Import(SecurityConfig.class)
 class SegurancaApiTest {
 
@@ -50,8 +51,6 @@ class SegurancaApiTest {
     @MockitoBean
     private PedidoService pedidoService;
     @MockitoBean
-    private DashboardService dashboardService;
-    @MockitoBean
     private AuditoriaService auditoriaService;
     @MockitoBean
     private ClienteService clienteService;
@@ -59,6 +58,8 @@ class SegurancaApiTest {
     private UsuarioService usuarioService;
     @MockitoBean
     private UsuarioDetailsService usuarioDetailsService;
+    @MockitoBean
+    private DashboardService dashboardService;
 
     @BeforeEach
     void setUp() {
@@ -140,18 +141,6 @@ class SegurancaApiTest {
     }
 
     @Test
-    @WithMockUser(username = "gerente", roles = "GERENTE")
-    void gerenteConsultaDashboard() throws Exception {
-        mvc.perform(get("/api/dashboard")).andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(username = "atendente01", roles = "ATENDENTE")
-    void atendenteNaoConsultaDashboard() throws Exception {
-        mvc.perform(get("/api/dashboard")).andExpect(status().isForbidden());
-    }
-
-    @Test
     @WithMockUser(username = "atendente01", roles = "ATENDENTE")
     void requisicaoSemCsrfEBloqueada() throws Exception {
         mvc.perform(post("/api/pedidos")
@@ -209,5 +198,40 @@ class SegurancaApiTest {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void adminNaoAcessaClientes() throws Exception {
         mvc.perform(get("/api/clientes")).andExpect(status().isForbidden());
+    }
+
+    // ---------- dashboard: ADMIN e GERENTE, somente leitura ----------
+
+    @Test
+    @WithMockUser(username = "atendente01", roles = "ATENDENTE")
+    void atendenteNaoAcessaDashboard() throws Exception {
+        mvc.perform(get("/api/dashboard")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/dashboard/resumo")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gerente", roles = "GERENTE")
+    void gerenteConsultaDashboard() throws Exception {
+        mvc.perform(get("/api/dashboard/resumo")).andExpect(status().isOk());
+        mvc.perform(get("/api/dashboard/produtos-mais-vendidos").param("limite", "3")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void adminConsultaDashboardMasNaoAltera() throws Exception {
+        mvc.perform(get("/api/dashboard")).andExpect(status().isOk());
+        mvc.perform(post("/api/dashboard").with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "gerente", roles = "GERENTE")
+    void filtroComValorInvalidoRetorna400() throws Exception {
+        mvc.perform(get("/api/dashboard/resumo").param("status", "INEXISTENTE")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/dashboard/resumo").param("dataInicio", "31/12/2026")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void dashboardSemLoginRecebe401() throws Exception {
+        mvc.perform(get("/api/dashboard/resumo")).andExpect(status().isUnauthorized());
     }
 }

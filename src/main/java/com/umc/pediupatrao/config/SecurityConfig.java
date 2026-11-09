@@ -77,8 +77,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/auditoria/**", "/api/auditoria/**").hasAnyRole(ADMIN, GERENTE)
                         .requestMatchers("/auditoria/**", "/api/auditoria/**").denyAll()
 
-                        // ===== dashboard: ADMIN e GERENTE, somente leitura =====
-                        .requestMatchers("/dashboard", "/api/dashboard/**").hasAnyRole(ADMIN, GERENTE)
+                        // ===== dashboard administrativo: ADMIN e GERENTE, somente leitura =====
+                        .requestMatchers(HttpMethod.GET, "/dashboard", "/api/dashboard/**").hasAnyRole(ADMIN, GERENTE)
+                        .requestMatchers("/dashboard", "/api/dashboard/**").denyAll()
 
                         // ===== pedidos =====
                         // cancelamento e desconto: exclusivo do GERENTE (nem o ADMIN pode)
