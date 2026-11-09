@@ -4,6 +4,16 @@ Evolução do sistema de pedidos da pizzaria (Java 21, Spring Boot 3.4, Spring S
 Nessa etapa foram adicionados perfis de acesso, controle de entrada/saída dos pedidos, cancelamento e desconto
 pelo gerente e auditoria das alterações de pedidos e clientes.
 
+## Dashboard administrativo (v1.1.0)
+
+Painel em `/dashboard` (perfis ADMIN e GERENTE) com indicadores de vendas, gráficos, situação dos pedidos,
+produtos mais vendidos, filtros e atualização automática, alimentado pela API `/api/dashboard`.
+
+Documentação completa (requisitos, endpoints, erros, decisões de projeto e testes):
+**[docs/dashboard/DOCUMENTACAO.md](docs/dashboard/DOCUMENTACAO.md)**
+
+Para ver os gráficos preenchidos numa base vazia, rode com `DEMO_DATA=true`, que gera pedidos de demonstração dos últimos 45 dias.
+
 ## Como executar
 
 Pré-requisitos: **Java 21** (o Maven Wrapper já vem no projeto).
@@ -14,6 +24,14 @@ Pré-requisitos: **Java 21** (o Maven Wrapper já vem no projeto).
 
 # Windows
 mvnw.cmd spring-boot:run
+```
+
+No Windows (PowerShell) com MongoDB local:
+
+```powershell
+$env:MONGODB_URI="mongodb://localhost:27017"
+$env:DEMO_DATA="true"   # opcional
+.\mvnw.cmd spring-boot:run
 ```
 
 Acesse http://localhost:8080
@@ -199,6 +217,7 @@ Fazendo o mesmo logado como **admin**, o cancelamento também retorna 403 (só o
 
 ```
 src/main/java/com/umc/pediupatrao
+├── dashboard/      DashboardController (API), DashboardService (cálculos), DTOs, página
 ├── auditoria/      RegistroAuditoria, repositório, service, Alteracoes, MascaraDados
 ├── config/         SecurityConfig, DataInitializer, ClockConfig, MongoInitConfig
 ├── controller/     APIs REST, HomeController (telas), ApiExceptionHandler
