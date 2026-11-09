@@ -298,7 +298,7 @@ Os testes das etapas anteriores (pedidos, clientes, usuários, auditoria) contin
 ## 8. Fluxo de branches (gitflow)
 
 ```
-main ─────────────────────────────────────────────●── (v1.1.0)
+main ──●── PR #1 (feature/dashboard-administrativo) ──────────●── (v1.1.0)
   \                                              /
    develop ──●────────────●──────────●──────────●
               \          / \        / \        /
@@ -308,6 +308,7 @@ main ─────────────────────────
 ```
 
 - `main`: versão entregue (tag `v1.0.0` = Prática M1 Parte 2, `v1.1.0` = dashboard).
+- `feature/dashboard-administrativo`: primeira versão do dashboard (um endpoint e filtro só por data), integrada na `main` pelo pull request #1. Foi trazida para a `develop` e substituída pela versão atual, que separa a API por recurso e adiciona filtros, gráficos e a documentação.
 - `develop`: integração das funcionalidades.
 - `feature/dashboard-api`: endpoints, regras de cálculo, índice e testes da API.
 - `feature/dashboard-tela`: página, gráficos, filtros, atualização automática e dados de demonstração.
@@ -320,7 +321,7 @@ Pré-requisitos: Java 21 e MongoDB (local ou Atlas).
 
 Windows (PowerShell):
 ```powershell
-$env:MONGODB_URI="mongodb://localhost:27017"
+# o padrão é o MongoDB local (mongodb://localhost:27017); para outro servidor defina $env:MONGODB_URI
 $env:DEMO_DATA="true"        # opcional: gera pedidos de demonstração para os gráficos
 .\mvnw.cmd spring-boot:run
 ```

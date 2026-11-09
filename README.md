@@ -26,10 +26,9 @@ Pré-requisitos: **Java 21** (o Maven Wrapper já vem no projeto).
 mvnw.cmd spring-boot:run
 ```
 
-No Windows (PowerShell) com MongoDB local:
+Com dados de demonstração para o dashboard (PowerShell):
 
 ```powershell
-$env:MONGODB_URI="mongodb://localhost:27017"
 $env:DEMO_DATA="true"   # opcional
 .\mvnw.cmd spring-boot:run
 ```
@@ -38,14 +37,14 @@ Acesse http://localhost:8080
 
 ### Banco de dados
 
-Por padrão a aplicação usa o cluster MongoDB Atlas da disciplina, mas numa base separada (`pediupatrao_m1p2`)
-pra não misturar com os dados de outros projetos. Dá pra trocar por variáveis de ambiente:
+Por padrão a aplicação conecta ao MongoDB local em `localhost:27017`, usando uma base separada
+(`pediupatrao_m1p2`) pra não misturar com os dados de outros projetos. Para usar Atlas ou outro servidor,
+configure `MONGODB_URI` e `MONGODB_DATABASE`. No PowerShell:
 
-```bash
-# exemplo com MongoDB local
-export MONGODB_URI=mongodb://localhost:27017
-export MONGODB_DATABASE=pediupatrao
-./mvnw spring-boot:run
+```powershell
+$env:MONGODB_URI = "mongodb+srv://usuario:senha@servidor/"
+$env:MONGODB_DATABASE = "pediupatrao_m1p2"
+.\mvnw.cmd spring-boot:run
 ```
 
 ### Usuários iniciais
@@ -179,6 +178,7 @@ Integridade e proteção de dados:
 | POST   | `/api/pedidos/{id}/cancelamento`      | GERENTE             |
 | POST   | `/api/pedidos/{id}/desconto`          | GERENTE             |
 | GET    | `/api/auditoria`                      | ADMIN, GERENTE      |
+| GET    | `/api/dashboard/**` (ver [documentação](docs/dashboard/DOCUMENTACAO.md#4-documentação-dos-endpoints)) | ADMIN, GERENTE |
 | *      | `/api/usuarios/**`                    | ADMIN               |
 
 Erros da API seguem o formato `{"status": 422, "erro": "mensagem", "dataHora": "..."}`
@@ -220,11 +220,11 @@ src/main/java/com/umc/pediupatrao
 ├── dashboard/      DashboardController (API), DashboardService (cálculos), DTOs, página
 ├── auditoria/      RegistroAuditoria, repositório, service, Alteracoes, MascaraDados
 ├── config/         SecurityConfig, DataInitializer, ClockConfig, MongoInitConfig
-├── controller/     APIs REST, HomeController (telas), ApiExceptionHandler
-├── dto/            PedidoRequest, ItemPedidoRequest, CancelamentoRequest, DescontoRequest
+├── controller/     APIs REST, dashboard, HomeController (telas), ApiExceptionHandler
+├── dto/            DTOs de pedidos e DashboardResponse
 ├── entity/         Pedido, ItemPedido, StatusPedido, TipoEntrega, HistoricoStatus, Perfil...
 ├── exception/      RegraNegocioException, TransicaoInvalidaException, RecursoNaoEncontradoException
 ├── repository/
 ├── security/       UsuarioLogado
-└── service/        PedidoService, ClienteService, UsuarioService...
+└── service/        PedidoService, DashboardService, ClienteService, UsuarioService...
 ```
